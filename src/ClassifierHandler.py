@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from preprocessing import run_AM_process, parse_segment_dat_list, generate_final_features
 
+
 def get_paths():
     script_path = os.path.abspath(__file__)
     src_dir = os.path.dirname(os.path.dirname(script_path))
@@ -16,16 +17,18 @@ def get_paths():
     model_save_dir = os.path.join(artifact_dir, 'model')
     return artifact_dir, model_save_dir
 
+
 class ClassifierHandler():
     """
     Class to handle all classifier operations
     """
+
     def __init__(
-            self, 
-            model_dir, 
+            self,
+            model_dir,
             output_dir,
             env_path,
-            ):
+    ):
         """
         Initialize classifier handler
 
@@ -51,8 +54,8 @@ class ClassifierHandler():
         """
         env = np.load(self.env_path)
         # If nans are present
-        non_nan_trials = ~np.isnan(env).any(axis = (0,2))
-        env = env[:,non_nan_trials,:]
+        non_nan_trials = ~np.isnan(env).any(axis=(0, 2))
+        env = env[:, non_nan_trials, :]
         return env
 
     def run_pre_process(self):
@@ -74,7 +77,7 @@ class ClassifierHandler():
         """
         Load the model
         """
-        clf = xgb.XGBClassifier() 
+        clf = xgb.XGBClassifier()
         clf.load_model(os.path.join(self.model_dir, 'xgb_model.json'))
         return clf
 
