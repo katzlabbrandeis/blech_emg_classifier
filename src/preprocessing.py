@@ -45,6 +45,20 @@ from pickle import dump, load
 
 
 def extract_movements(this_trial_dat, size=250):
+    """
+    Detect and extract movement segments from EMG signal using white tophat filtering.
+
+    Args:
+        this_trial_dat (np.array): Raw EMG signal data
+        size (int, optional): Size of the structuring element for white tophat. Defaults to 250.
+
+    Returns:
+        tuple: Contains:
+            - segment_starts (np.array): Indices where movements begin
+            - segment_ends (np.array): Indices where movements end  
+            - segment_dat (list): Raw EMG data for each movement segment
+            - filtered_segment_dat (list): Filtered EMG data for each movement segment
+    """
     filtered_dat = white_tophat(this_trial_dat, size=size)
     segments_raw = np.where(filtered_dat)[0]
     segments = np.zeros_like(filtered_dat)
@@ -70,7 +84,20 @@ def threshold_movement_lengths(
         min_len=50,
         max_len=500):
     """
-    Threshold movement lengths
+    Filter movement segments based on their duration.
+
+    Args:
+        segment_starts (np.array): Start indices of segments
+        segment_ends (np.array): End indices of segments
+        segment_dat (list): List of segment data
+        min_len (int, optional): Minimum allowed segment length. Defaults to 50.
+        max_len (int, optional): Maximum allowed segment length. Defaults to 500.
+
+    Returns:
+        tuple: Contains filtered:
+            - segment_starts (np.array): Start indices of valid segments
+            - segment_ends (np.array): End indices of valid segments
+            - segment_dat (list): Data of valid segments
     """
     keep_inds = [x for x, y in enumerate(segment_dat) if len(
         y) > min_len and len(y) < max_len]
@@ -82,8 +109,14 @@ def threshold_movement_lengths(
 
 def normalize_segments(segment_dat):
     """
-    Perform min-max normalization on each segment
-    And make length of each segment equal 100
+    Normalize movement segments using min-max scaling and interpolate to fixed length.
+
+    Args:
+        segment_dat (list): List of movement segments with varying lengths
+
+    Returns:
+        np.array: Array of normalized segments, each with length 100 and 
+                 values scaled between 0 and 1
     """
     max_len = max([len(x) for x in segment_dat])
     interp_segment_dat = [np.interp(
@@ -177,15 +210,21 @@ def extract_features(
 
 def run_AM_process(envs, pre_stim=2000):
     """
-    Run AM process on envs from a single session
+    Process EMG envelopes to extract movement segments and features.
 
-    Inputs:
-        envs (np.array): Array of shape (tastes, trials, time)
+    Args:
+        envs (np.array): Array of EMG envelopes with shape (tastes, trials, time)
+        pre_stim (int, optional): Number of pre-stimulus timepoints. Defaults to 2000.
 
-    Outputs:
-        segment_dat_list (list): List of segment data
-        feature_names (np.array): Array of feature names
-        inds (list): List of indices
+    Returns:
+        tuple: Contains:
+            - segment_dat_list (list): List of processed segments containing:
+                * feature arrays
+                * raw segment data
+                * normalized interpolated segments
+                * segment bounds
+            - feature_names (np.array): Names of extracted features
+            - inds (list): List of (taste, trial) index tuples
     """
     this_day_prestim_dat = envs[..., :pre_stim]
     mean_prestim = np.mean(this_day_prestim_dat, axis=None)
@@ -234,17 +273,24 @@ def run_AM_process(envs, pre_stim=2000):
 
 def parse_segment_dat_list(this_segment_dat_list, inds):
     """
-    Generate a dataframe with the following columns from segment_dat_list:
-    channel, taste, trial, segment_num, features, segment_raw, segment_bounds
+    Convert segment data list into a structured pandas DataFrame.
 
-    Inputs:
-    segment_dat_list : list of lists
-        - Each entry in list is a single trial
-    inds: list of tuples
-        - Each tuple is (taste, trial)
+    Args:
+        this_segment_dat_list (list): List of lists where each entry contains:
+            - features: Extracted feature array
+            - segment_raw: Raw segment data
+            - segment_norm_interp: Normalized interpolated segments
+            - segment_bounds: Start and end indices
+        inds (list): List of (taste, trial) tuples identifying each trial
 
     Returns:
-    gape_frame : pandas dataframe
+        pd.DataFrame: DataFrame with columns:
+            - features: Extracted feature array
+            - segment_raw: Raw segment data
+            - segment_norm_interp: Normalized interpolated segments
+            - segment_bounds: Start and end indices
+            - taste: Taste condition
+            - trial: Trial number
     """
 
     # Standardize features
