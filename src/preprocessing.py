@@ -13,7 +13,7 @@ Key Components:
         * Interval calculations
         * Frequency analysis
         * PCA transformation
-    
+
 The module supports both single-trial and batch processing of EMG data,
 with functions organized in a pipeline from raw signal processing to
 feature generation.

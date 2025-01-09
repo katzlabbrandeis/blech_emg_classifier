@@ -1,7 +1,7 @@
 """
 Main script for running EMG signal classification pipeline.
 
-This script loads EMG data from specified directories, processes it through 
+This script loads EMG data from specified directories, processes it through
 the classification pipeline, and generates predictions for movement segments.
 
 The pipeline includes:
