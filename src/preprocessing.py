@@ -1,3 +1,37 @@
+"""
+Preprocessing Module
+
+This module provides comprehensive functionality for processing EMG signals and
+extracting relevant features for movement classification.
+
+Key Components:
+    - Movement detection and extraction
+    - Signal normalization and standardization
+    - Feature extraction including:
+        * Duration measurements
+        * Amplitude analysis
+        * Interval calculations
+        * Frequency analysis
+        * PCA transformation
+    
+The module supports both single-trial and batch processing of EMG data,
+with functions organized in a pipeline from raw signal processing to
+feature generation.
+
+Functions:
+    extract_movements: Detects and extracts movement segments
+    normalize_segments: Normalizes movement segments
+    extract_features: Generates features from movement segments
+    run_AM_process: Runs complete analysis pipeline
+    generate_final_features: Prepares final feature set for classification
+
+Dependencies:
+    - numpy
+    - scipy
+    - sklearn
+    - pandas
+"""
+
 import sys
 import os
 import numpy as np

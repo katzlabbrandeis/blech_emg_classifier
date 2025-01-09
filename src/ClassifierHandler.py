@@ -1,3 +1,28 @@
+"""
+ClassifierHandler Module
+
+This module provides functionality for handling EMG signal classification tasks.
+It includes tools for loading EMG data, preprocessing signals, feature extraction,
+and making predictions using an XGBoost classifier.
+
+The main class ClassifierHandler orchestrates the entire pipeline from loading
+raw EMG signals to generating movement classifications.
+
+Key Features:
+    - EMG signal preprocessing and feature extraction
+    - Model loading and prediction
+    - Automated movement detection and classification
+    - Support for batch processing of trials
+
+Dependencies:
+    - xgboost
+    - numpy
+    - pandas
+    - json
+    - tqdm
+    - preprocessing module (local)
+"""
+
 import xgboost as xgb
 import os
 import sys
@@ -20,7 +45,25 @@ def get_paths():
 
 class ClassifierHandler():
     """
-    Class to handle all classifier operations
+    A class to handle EMG signal classification operations.
+    
+    This class manages the complete pipeline for EMG signal processing and classification,
+    including data loading, preprocessing, feature extraction, and prediction.
+    
+    Attributes:
+        model_dir (str): Directory containing the trained model files
+        output_dir (str): Directory for saving output files and predictions
+        env_path (str): Path to the EMG envelope file
+        feature_names (list): Names of extracted features (set after preprocessing)
+        segment_frame (pd.DataFrame): DataFrame containing processed segments and predictions
+        
+    Methods:
+        load_env_file: Loads and cleans EMG envelope data
+        run_pre_process: Executes complete preprocessing pipeline
+        load_model: Loads trained XGBoost classifier
+        load_event_types: Loads event type mappings
+        predict: Makes predictions on processed features
+        parse_and_predict: Runs complete pipeline from raw data to predictions
     """
 
     def __init__(
