@@ -38,7 +38,7 @@ from preprocessing import run_AM_process, parse_segment_dat_list, generate_final
 def get_paths():
     """
     Get the paths to important directories in the project.
-    
+
     Returns:
         tuple: Contains two strings:
             - artifact_dir (str): Path to the artifacts directory
@@ -113,11 +113,11 @@ class ClassifierHandler():
         """
         # Load the EMG envelope data array
         env = np.load(self.env_path)
-        
+
         # Remove any trials containing NaN values across all tastes and timepoints
         # axis=(0,2) checks across tastes (0) and timepoints (2) for each trial
         non_nan_trials = ~np.isnan(env).any(axis=(0, 2))
-        
+
         # Keep only the valid trials by boolean indexing
         env = env[:, non_nan_trials, :]
         return env
@@ -131,7 +131,7 @@ class ClassifierHandler():
         2. Performs automated movement detection
         3. Extracts segments and features
         4. Scales and normalizes the features
-        
+
         Returns:
             tuple: Contains four elements:
                 - all_features (np.ndarray): Raw extracted features
@@ -142,15 +142,15 @@ class ClassifierHandler():
         """
         # Load and clean the EMG envelope data
         env = self.load_env_file()
-        
+
         # Detect movements and extract initial features
         # segment_dat_list contains raw segments
         # inds contains timing information for each segment
         segment_dat_list, feature_names, inds = self.run_AM_process(env)
-        
+
         # Convert raw segments into a DataFrame with metadata
         segment_frame = self.parse_segment_dat_list(segment_dat_list, inds)
-        
+
         # Stack features and normalized segments into arrays
         # features are time-domain and frequency-domain characteristics
         all_features = np.stack(segment_frame.features.values)
@@ -216,12 +216,12 @@ class ClassifierHandler():
         """
         # Load the trained classifier model
         clf = self.load_model()
-        
+
         # Get class predictions (as numerical indices)
         y_pred = clf.predict(X)
         # Get probability estimates for each class
         y_pred_proba = clf.predict_proba(X)
-        
+
         # Load the mapping between numerical indices and movement type names
         event_code_dict = self.load_event_types()
         # Invert the dictionary to map from indices to names

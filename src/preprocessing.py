@@ -55,20 +55,20 @@ def extract_movements(this_trial_dat, size=250):
     Returns:
         tuple: Contains:
             - segment_starts (np.array): Indices where movements begin
-            - segment_ends (np.array): Indices where movements end  
+            - segment_ends (np.array): Indices where movements end
             - segment_dat (list): Raw EMG data for each movement segment
             - filtered_segment_dat (list): Filtered EMG data for each movement segment
     """
     # Apply white tophat filter to enhance peaks and remove baseline
     filtered_dat = white_tophat(this_trial_dat, size=size)
-    
+
     # Get indices where signal is non-zero after filtering
     segments_raw = np.where(filtered_dat)[0]
-    
+
     # Create binary mask of movement segments
     segments = np.zeros_like(filtered_dat)
     segments[segments_raw] = 1
-    
+
     # Find transitions from 0->1 (starts) and 1->0 (ends) using diff
     segment_starts = np.where(np.diff(segments) == 1)[0]
     segment_ends = np.where(np.diff(segments) == -1)[0]
@@ -122,23 +122,24 @@ def normalize_segments(segment_dat):
         segment_dat (list): List of movement segments with varying lengths
 
     Returns:
-        np.array: Array of normalized segments, each with length 100 and 
+        np.array: Array of normalized segments, each with length 100 and
                  values scaled between 0 and 1
     """
     # Find longest segment length (not used but kept for reference)
     max_len = max([len(x) for x in segment_dat])
-    
+
     # Interpolate each segment to fixed length of 100 points
     # This makes segments comparable regardless of original duration
     interp_segment_dat = [np.interp(
         np.linspace(0, 1, 100),  # Target x-coordinates (0 to 1, 100 points)
-        np.linspace(0, 1, len(x)),  # Source x-coordinates (0 to 1, original length)
+        # Source x-coordinates (0 to 1, original length)
+        np.linspace(0, 1, len(x)),
         x)  # Source y-coordinates (original signal values)
         for x in segment_dat]
-    
+
     # Stack segments into 2D array (n_segments x 100)
     interp_segment_dat = np.vstack(interp_segment_dat)
-    
+
     # Min-max normalization along time axis
     # Subtract minimum of each segment
     interp_segment_dat = interp_segment_dat - \
