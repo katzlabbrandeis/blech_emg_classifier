@@ -9,7 +9,8 @@ from sklearn.preprocessing import StandardScaler
 from time import time
 from pickle import dump, load
 
-def extract_movements(this_trial_dat, size = 250):
+
+def extract_movements(this_trial_dat, size=250):
     filtered_dat = white_tophat(this_trial_dat, size=size)
     segments_raw = np.where(filtered_dat)[0]
     segments = np.zeros_like(filtered_dat)
@@ -27,25 +28,28 @@ def extract_movements(this_trial_dat, size = 250):
                             for x, y in zip(segment_starts, segment_ends)]
     return segment_starts, segment_ends, segment_dat, filtered_segment_dat
 
+
 def threshold_movement_lengths(
         segment_starts,
         segment_ends,
         segment_dat,
-        min_len = 50,
-        max_len = 500):
+        min_len=50,
+        max_len=500):
     """
     Threshold movement lengths
     """
-    keep_inds = [x for x, y in enumerate(segment_dat) if len(y) > min_len and len(y) < max_len]
+    keep_inds = [x for x, y in enumerate(segment_dat) if len(
+        y) > min_len and len(y) < max_len]
     segment_starts = segment_starts[keep_inds]
     segment_ends = segment_ends[keep_inds]
     segment_dat = [segment_dat[x] for x in keep_inds]
     return segment_starts, segment_ends, segment_dat
 
+
 def normalize_segments(segment_dat):
     """
     Perform min-max normalization on each segment
-    And make length of each segment equal 100 
+    And make length of each segment equal 100
     """
     max_len = max([len(x) for x in segment_dat])
     interp_segment_dat = [np.interp(
@@ -61,12 +65,13 @@ def normalize_segments(segment_dat):
         np.max(interp_segment_dat, axis=-1)[:, None]
     return interp_segment_dat
 
+
 def extract_features(
-        segment_dat, 
-        segment_starts, 
+        segment_dat,
+        segment_starts,
         segment_ends,
-        mean_prestim = None
-        ):
+        mean_prestim=None
+):
     """
     Function to extract features from a list of segments
     Applied to a single trial
@@ -124,16 +129,17 @@ def extract_features(
         feature_list.append(amplitude_norm)
         feature_names.append('amplitude_norm')
 
-    feature_array = np.stack(feature_list, axis=-1) 
+    feature_array = np.stack(feature_list, axis=-1)
 
     return (
-            feature_array, 
-            feature_names, 
-            segment_dat, 
-            segment_starts, 
-            segment_ends, 
-            norm_interp_segment_dat
-            )
+        feature_array,
+        feature_names,
+        segment_dat,
+        segment_starts,
+        segment_ends,
+        norm_interp_segment_dat
+    )
+
 
 def run_AM_process(envs, pre_stim=2000):
     """
@@ -160,7 +166,7 @@ def run_AM_process(envs, pre_stim=2000):
             segment_starts,
             segment_ends,
             segment_dat,
-           filtered_segment_dat
+            filtered_segment_dat
         ) = extract_movements(
             this_trial_dat, size=200)
 
@@ -179,16 +185,18 @@ def run_AM_process(envs, pre_stim=2000):
          segment_ends,
          norm_interp_segment_dat,
          ) = extract_features(
-            segment_dat, segment_starts, segment_ends, mean_prestim = mean_prestim)
+            segment_dat, segment_starts, segment_ends, mean_prestim=mean_prestim)
 
         assert len(feature_array) == len(segment_dat) == len(segment_starts) == len(segment_ends), \
             'Mismatch in feature array lengths'
 
         segment_bounds = list(zip(segment_starts, segment_ends))
-        merged_dat = [feature_array, segment_dat, norm_interp_segment_dat, segment_bounds]
+        merged_dat = [feature_array, segment_dat,
+                      norm_interp_segment_dat, segment_bounds]
         segment_dat_list.append(merged_dat)
 
     return segment_dat_list, feature_names, inds
+
 
 def parse_segment_dat_list(this_segment_dat_list, inds):
     """
@@ -207,24 +215,25 @@ def parse_segment_dat_list(this_segment_dat_list, inds):
 
     # Standardize features
     wanted_data = dict(
-        features = [x[0] for x in this_segment_dat_list],
-        segment_raw = [x[1] for x in this_segment_dat_list],
-        segment_norm_interp = [x[2] for x in this_segment_dat_list],
-        segment_bounds = [x[3] for x in this_segment_dat_list],
-        )
+        features=[x[0] for x in this_segment_dat_list],
+        segment_raw=[x[1] for x in this_segment_dat_list],
+        segment_norm_interp=[x[2] for x in this_segment_dat_list],
+        segment_bounds=[x[3] for x in this_segment_dat_list],
+    )
     gape_frame = pd.DataFrame(wanted_data)
     gape_frame['taste'] = [x[0] for x in inds]
     gape_frame['trial'] = [x[1] for x in inds]
     gape_frame = gape_frame.explode(list(wanted_data.keys()))
     return gape_frame
 
+
 def generate_final_features(
-        all_features, 
-        feature_names, 
+        all_features,
+        feature_names,
         scaled_segments,
-        artifact_dir, 
-        create_new_objs = False
-        ):
+        artifact_dir,
+        create_new_objs=False
+):
     """
     Generate final features for classification
 
@@ -258,10 +267,12 @@ def generate_final_features(
             pca_obj = load(open(pca_save_path, 'rb'))
             scale_obj = load(open(scale_save_path, 'rb'))
         else:
-            raise ValueError('PCA and scale object not found and create_new_objs is False')
+            raise ValueError(
+                'PCA and scale object not found and create_new_objs is False')
 
     # Drop 'amplitude_abs' from features
-    drop_inds = [i for i, x in enumerate(feature_names) if 'amplitude_abs' in x]
+    drop_inds = [i for i, x in enumerate(
+        feature_names) if 'amplitude_abs' in x]
     all_features = np.delete(all_features, drop_inds, axis=1)
     feature_names = np.delete(feature_names, drop_inds)
 
