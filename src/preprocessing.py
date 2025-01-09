@@ -277,7 +277,6 @@ def generate_final_features(
     feature_names = np.delete(feature_names, drop_inds)
 
     # Get PCA features
-    pca_obj.fit(scaled_segments)
     if create_new_objs:
         pca_obj.fit(scaled_segments)
     pca_features = pca_obj.transform(scaled_segments)[:, :3]
@@ -294,7 +293,7 @@ def generate_final_features(
     pca_feature_names = ['pca_{}'.format(i) for i in range(3)]
     feature_names = np.concatenate([feature_names, pca_feature_names])
 
-    if artifact_dir is not None:
+    if artifact_dir is not None and create_new_objs:
         dump(pca_obj, open(pca_save_path, 'wb'))
         dump(scale_obj, open(scale_save_path, 'wb'))
 
