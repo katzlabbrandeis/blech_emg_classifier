@@ -92,23 +92,30 @@ class ClassifierHandler():
     def predict(self, X):
         """
         Predict on X
+
+        Returns:
+            y_pred: array of predicted class indices
+            y_pred_names: list of predicted class names
+            y_pred_proba: array of prediction probabilities for each class
         """
         clf = self.load_model()
         y_pred = clf.predict(X)
+        y_pred_proba = clf.predict_proba(X)
         event_code_dict = self.load_event_types()
         inv_event_code_dict = {v: k for k, v in event_code_dict.items()}
         y_pred_names = [inv_event_code_dict[x] for x in y_pred]
-        return y_pred, y_pred_names
+        return y_pred, y_pred_names, y_pred_proba
 
     def parse_and_predict(self):
         """
         Run the entire process
         """
         all_features, feature_names, scaled_features, segment_frame = self.run_pre_process()
-        y_pred, y_pred_names = self.predict(scaled_features)
+        y_pred, y_pred_names, y_pred_proba = self.predict(scaled_features)
         segment_frame['raw_features'] = list(all_features)
         segment_frame['features'] = list(scaled_features)
         segment_frame['pred'] = y_pred
         segment_frame['pred_names'] = y_pred_names
+        segment_frame['pred_proba'] = list(y_pred_proba)
         self.segment_frame = segment_frame
         return y_pred, segment_frame
