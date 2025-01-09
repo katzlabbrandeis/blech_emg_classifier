@@ -46,17 +46,17 @@ def get_paths():
 class ClassifierHandler():
     """
     A class to handle EMG signal classification operations.
-    
+
     This class manages the complete pipeline for EMG signal processing and classification,
     including data loading, preprocessing, feature extraction, and prediction.
-    
+
     Attributes:
         model_dir (str): Directory containing the trained model files
         output_dir (str): Directory for saving output files and predictions
         env_path (str): Path to the EMG envelope file
         feature_names (list): Names of extracted features (set after preprocessing)
         segment_frame (pd.DataFrame): DataFrame containing processed segments and predictions
-        
+
     Methods:
         load_env_file: Loads and cleans EMG envelope data
         run_pre_process: Executes complete preprocessing pipeline
