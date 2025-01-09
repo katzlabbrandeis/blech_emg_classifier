@@ -81,12 +81,13 @@ class ClassifierHandler():
             env_path,
     ):
         """
-        Initialize classifier handler
+        Initialize classifier handler for EMG signal processing
 
         Inputs:
-            model_dir: str, path to model directory
-            output_dir: str, path to output directory
-            env_path: str, path to EMG env file
+            model_dir: str, path to directory containing trained XGBoost model and artifacts
+            output_dir: str, path to directory for saving predictions and processed data
+            env_path: str, path to EMG envelope file (.npy) containing preprocessed signals
+                     with shape (n_tastes, n_trials, n_timepoints)
         """
         self.model_dir = model_dir
         self.output_dir = output_dir
@@ -110,9 +111,14 @@ class ClassifierHandler():
                 - n_trials: Number of valid trials (after removing NaN trials)
                 - n_timepoints: Number of time points in each trial
         """
+        # Load the EMG envelope data array
         env = np.load(self.env_path)
-        # If nans are present
+        
+        # Remove any trials containing NaN values across all tastes and timepoints
+        # axis=(0,2) checks across tastes (0) and timepoints (2) for each trial
         non_nan_trials = ~np.isnan(env).any(axis=(0, 2))
+        
+        # Keep only the valid trials by boolean indexing
         env = env[:, non_nan_trials, :]
         return env
 
@@ -134,10 +140,21 @@ class ClassifierHandler():
                 - segment_frame (pd.DataFrame): DataFrame containing processed segments
                   and their associated metadata
         """
+        # Load and clean the EMG envelope data
         env = self.load_env_file()
+        
+        # Detect movements and extract initial features
+        # segment_dat_list contains raw segments
+        # inds contains timing information for each segment
         segment_dat_list, feature_names, inds = self.run_AM_process(env)
+        
+        # Convert raw segments into a DataFrame with metadata
         segment_frame = self.parse_segment_dat_list(segment_dat_list, inds)
+        
+        # Stack features and normalized segments into arrays
+        # features are time-domain and frequency-domain characteristics
         all_features = np.stack(segment_frame.features.values)
+        # scaled_segments are the normalized EMG traces themselves
         scaled_segments = np.stack(segment_frame.segment_norm_interp.values)
         all_features, feature_names, scaled_features = \
             self.generate_final_features(all_features, feature_names, scaled_segments,
@@ -155,7 +172,10 @@ class ClassifierHandler():
         Returns:
             xgb.XGBClassifier: Loaded XGBoost classifier model ready for predictions
         """
+        # Initialize an empty XGBoost classifier
         clf = xgb.XGBClassifier()
+        # Load the pre-trained model parameters from disk
+        # The model was trained on a standardized set of EMG movement features
         clf.load_model(os.path.join(self.model_dir, 'xgb_model.json'))
         return clf
 
@@ -194,11 +214,19 @@ class ClassifierHandler():
                 - y_pred_proba (np.ndarray): Matrix of prediction probabilities
                   for each class, shape (n_samples, n_classes)
         """
+        # Load the trained classifier model
         clf = self.load_model()
+        
+        # Get class predictions (as numerical indices)
         y_pred = clf.predict(X)
+        # Get probability estimates for each class
         y_pred_proba = clf.predict_proba(X)
+        
+        # Load the mapping between numerical indices and movement type names
         event_code_dict = self.load_event_types()
+        # Invert the dictionary to map from indices to names
         inv_event_code_dict = {v: k for k, v in event_code_dict.items()}
+        # Convert numerical predictions to human-readable movement types
         y_pred_names = [inv_event_code_dict[x] for x in y_pred]
         return y_pred, y_pred_names, y_pred_proba
 
