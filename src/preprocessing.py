@@ -59,10 +59,17 @@ def extract_movements(this_trial_dat, size=250):
             - segment_dat (list): Raw EMG data for each movement segment
             - filtered_segment_dat (list): Filtered EMG data for each movement segment
     """
+    # Apply white tophat filter to enhance peaks and remove baseline
     filtered_dat = white_tophat(this_trial_dat, size=size)
+    
+    # Get indices where signal is non-zero after filtering
     segments_raw = np.where(filtered_dat)[0]
+    
+    # Create binary mask of movement segments
     segments = np.zeros_like(filtered_dat)
     segments[segments_raw] = 1
+    
+    # Find transitions from 0->1 (starts) and 1->0 (ends) using diff
     segment_starts = np.where(np.diff(segments) == 1)[0]
     segment_ends = np.where(np.diff(segments) == -1)[0]
     # If first start is after first end, drop first end
@@ -118,16 +125,25 @@ def normalize_segments(segment_dat):
         np.array: Array of normalized segments, each with length 100 and 
                  values scaled between 0 and 1
     """
+    # Find longest segment length (not used but kept for reference)
     max_len = max([len(x) for x in segment_dat])
+    
+    # Interpolate each segment to fixed length of 100 points
+    # This makes segments comparable regardless of original duration
     interp_segment_dat = [np.interp(
-        np.linspace(0, 1, 100),
-        np.linspace(0, 1, len(x)),
-        x)
+        np.linspace(0, 1, 100),  # Target x-coordinates (0 to 1, 100 points)
+        np.linspace(0, 1, len(x)),  # Source x-coordinates (0 to 1, original length)
+        x)  # Source y-coordinates (original signal values)
         for x in segment_dat]
+    
+    # Stack segments into 2D array (n_segments x 100)
     interp_segment_dat = np.vstack(interp_segment_dat)
-    # Normalize
+    
+    # Min-max normalization along time axis
+    # Subtract minimum of each segment
     interp_segment_dat = interp_segment_dat - \
         np.min(interp_segment_dat, axis=-1)[:, None]
+    # Divide by maximum of each segment to get range [0,1]
     interp_segment_dat = interp_segment_dat / \
         np.max(interp_segment_dat, axis=-1)[:, None]
     return interp_segment_dat
@@ -146,7 +162,7 @@ def extract_features(
     # Features to extract
     # 1. Duration of movement
     # 2. Amplitude
-    # 3. Left and Right intervals
+    # 3. Left and Right intervals (time between consecutive peaks)
 
     # No need to calculate PCA of time-adjusted waveform at this stage
     # as it's better to do it over the entire dataset
@@ -156,7 +172,9 @@ def extract_features(
 
     If mean_prestim is provided, also return normalized amplitude
     """
+    # Find peak location within each segment
     peak_inds = [np.argmax(x) for x in segment_dat]
+    # Convert to absolute time by adding segment start times
     peak_times = [x+y for x, y in zip(segment_starts, peak_inds)]
     # Drop first and last segments because we can't get intervals for them
     segment_dat = segment_dat[1:-1]
