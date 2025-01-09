@@ -36,6 +36,14 @@ from preprocessing import run_AM_process, parse_segment_dat_list, generate_final
 
 
 def get_paths():
+    """
+    Get the paths to important directories in the project.
+    
+    Returns:
+        tuple: Contains two strings:
+            - artifact_dir (str): Path to the artifacts directory
+            - model_save_dir (str): Path to the model directory within artifacts
+    """
     script_path = os.path.abspath(__file__)
     src_dir = os.path.dirname(os.path.dirname(script_path))
     artifact_dir = os.path.join(src_dir, 'artifacts')
@@ -89,11 +97,18 @@ class ClassifierHandler():
 
     def load_env_file(self):
         """
-        Load env file and remove nans
+        Load EMG envelope file and remove any trials containing NaN values.
 
-        Outputs:
-            env: np.array, env file with nans removed
-                - Expected shape: (n_tastes, n_trials, n_timepoints)
+        The envelope file contains preprocessed EMG signals organized by tastes and trials.
+        This method loads the file and cleans it by removing any trials that contain
+        NaN values to ensure data quality.
+
+        Returns:
+            np.ndarray: Cleaned EMG envelope data with shape (n_tastes, n_trials, n_timepoints)
+                where:
+                - n_tastes: Number of taste stimuli
+                - n_trials: Number of valid trials (after removing NaN trials)
+                - n_timepoints: Number of time points in each trial
         """
         env = np.load(self.env_path)
         # If nans are present
@@ -103,7 +118,21 @@ class ClassifierHandler():
 
     def run_pre_process(self):
         """
-        Run the entire process
+        Execute the complete preprocessing pipeline for EMG data.
+
+        This method orchestrates the entire preprocessing workflow:
+        1. Loads and cleans the EMG envelope data
+        2. Performs automated movement detection
+        3. Extracts segments and features
+        4. Scales and normalizes the features
+        
+        Returns:
+            tuple: Contains four elements:
+                - all_features (np.ndarray): Raw extracted features
+                - feature_names (list): Names of the extracted features
+                - scaled_features (np.ndarray): Normalized and scaled features
+                - segment_frame (pd.DataFrame): DataFrame containing processed segments
+                  and their associated metadata
         """
         env = self.load_env_file()
         segment_dat_list, feature_names, inds = self.run_AM_process(env)
@@ -118,7 +147,13 @@ class ClassifierHandler():
 
     def load_model(self):
         """
-        Load the model
+        Load the trained XGBoost classifier model from disk.
+
+        Loads a pre-trained XGBoost model from the specified model directory.
+        The model should be saved as 'xgb_model.json' in the model directory.
+
+        Returns:
+            xgb.XGBClassifier: Loaded XGBoost classifier model ready for predictions
         """
         clf = xgb.XGBClassifier()
         clf.load_model(os.path.join(self.model_dir, 'xgb_model.json'))
@@ -126,7 +161,14 @@ class ClassifierHandler():
 
     def load_event_types(self):
         """
-        Load event types
+        Load the event type mapping dictionary from disk.
+
+        Reads the event code dictionary that maps between numerical class indices
+        and human-readable movement type labels.
+
+        Returns:
+            dict: Mapping between movement type names (str) and their numerical
+                 codes (int) used by the classifier
         """
         with open(os.path.join(self.output_dir, 'event_code_dict.json'), 'r') as f:
             event_code_dict = json.load(f)
@@ -134,12 +176,23 @@ class ClassifierHandler():
 
     def predict(self, X):
         """
-        Predict on X
+        Make predictions on preprocessed EMG features.
+
+        This method:
+        1. Loads the trained classifier
+        2. Makes predictions on the input features
+        3. Converts numerical predictions to human-readable movement types
+        4. Calculates prediction probabilities
+
+        Args:
+            X (np.ndarray): Preprocessed and scaled feature matrix
 
         Returns:
-            y_pred: array of predicted class indices
-            y_pred_names: list of predicted class names
-            y_pred_proba: array of prediction probabilities for each class
+            tuple: Contains three elements:
+                - y_pred (np.ndarray): Array of predicted class indices
+                - y_pred_names (list): List of predicted movement type names
+                - y_pred_proba (np.ndarray): Matrix of prediction probabilities
+                  for each class, shape (n_samples, n_classes)
         """
         clf = self.load_model()
         y_pred = clf.predict(X)
@@ -151,7 +204,24 @@ class ClassifierHandler():
 
     def parse_and_predict(self):
         """
-        Run the entire process
+        Execute the complete pipeline from raw data to predictions.
+
+        This method runs the entire workflow:
+        1. Preprocesses the raw EMG data
+        2. Extracts and scales features
+        3. Makes predictions using the trained model
+        4. Organizes results into a DataFrame
+
+        Returns:
+            tuple: Contains two elements:
+                - y_pred (np.ndarray): Array of predicted class indices
+                - segment_frame (pd.DataFrame): DataFrame containing all processed
+                  data and predictions, including:
+                    * raw_features: Original extracted features
+                    * features: Scaled features
+                    * pred: Numerical predictions
+                    * pred_names: Human-readable prediction labels
+                    * pred_proba: Prediction probabilities
         """
         all_features, feature_names, scaled_features, segment_frame = self.run_pre_process()
         y_pred, y_pred_names, y_pred_proba = self.predict(scaled_features)
