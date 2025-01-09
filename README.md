@@ -45,7 +45,7 @@ The main interface is the `ClassifierHandler` class which handles:
 
 - Loading EMG envelope data
 - Preprocessing signals
-- Feature extraction 
+- Feature extraction
 - Movement classification using XGBoost
 
 Basic usage:
@@ -59,7 +59,7 @@ artifact_dir, model_save_dir = get_paths()
 # Initialize classifier
 handler = ClassifierHandler(
     model_dir=model_save_dir,
-    output_dir=artifact_dir, 
+    output_dir=artifact_dir,
     env_path='path/to/emg/envelope.npy'
 )
 
@@ -69,7 +69,7 @@ predictions, segments = handler.parse_and_predict()
 
 The classifier identifies 3 movement types:
 - No movement (0)
-- Gape (1) 
+- Gape (1)
 - MTMs (2)
 
 See `run_flow.py` for a complete example.
@@ -103,7 +103,7 @@ Contains functions for:
 
 - Python 3.6+
 - NumPy
-- Pandas  
+- Pandas
 - Scikit-learn
 - XGBoost
 - SciPy
