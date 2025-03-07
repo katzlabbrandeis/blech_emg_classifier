@@ -67,6 +67,20 @@ handler = ClassifierHandler(
 predictions, segments = handler.parse_and_predict()
 ```
 
+Columns of `segments`:
+```
+    "features": "Features of the segment (with normalized amplitude)",
+    "segment_raw": "Raw segment",
+    "segment_norm_interp": "Amplitude normalized and constant-length interpolated segment",
+    "segment_bounds": "Start and end of segment",
+    "taste": "Taste of the trial",
+    "trial": "Trial number given taste",
+    "raw_features": "Features of the segment (without amplitude normalization)",
+    "pred": "Predicted movement type",
+    "pred_names": "Predicted movement type name",
+    "pred_proba": "Predicted movement type probability",
+```
+
 The classifier identifies 3 movement types:
 - No movement (0)
 - Gape (1)
