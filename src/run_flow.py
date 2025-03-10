@@ -25,7 +25,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from ClassifierHandler import ClassifierHandler, get_paths
-from visualize import generate_raster_plot
+from visualize import generate_raster_plot, generate_detailed_plot
 
 # Get paths to model artifacts (PCA, scaler objects) and output directories
 # artifacts_dir: Contains PCA, scaler objects, and event code mappings
@@ -75,8 +75,19 @@ this_handler = ClassifierHandler(
 #   * Predicted movement types
 y_pred, segment_frame = this_handler.parse_and_predict()
 
-# Plot the predictions
+# Plot the predictions - overview raster plot
 fig, ax = generate_raster_plot(
     segments_frame=segment_frame,
+)
+plt.show()
+
+# Generate a detailed plot for the first trial of the first taste
+# This shows both the classification and timing details
+env = this_handler.load_env_file()  # Get the raw EMG data
+fig, ax = generate_detailed_plot(
+    segments_frame=segment_frame,
+    raw_emg=env,
+    trial_idx=0,
+    taste_idx=0
 )
 plt.show()
