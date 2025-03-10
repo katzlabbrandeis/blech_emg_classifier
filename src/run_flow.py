@@ -22,8 +22,10 @@ import numpy as np
 import pandas as pd
 import json
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 from ClassifierHandler import ClassifierHandler, get_paths
+from visualize import generate_raster_plot
 
 # Get paths to model artifacts (PCA, scaler objects) and output directories
 # artifacts_dir: Contains PCA, scaler objects, and event code mappings
@@ -72,3 +74,9 @@ this_handler = ClassifierHandler(
 #   * Timing information
 #   * Predicted movement types
 y_pred, segment_frame = this_handler.parse_and_predict()
+
+# Plot the predictions
+fig, ax = generate_raster_plot(
+    segments_frame=segment_frame,
+)
+plt.show()

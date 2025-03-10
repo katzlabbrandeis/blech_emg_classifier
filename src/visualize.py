@@ -71,8 +71,6 @@ def plot_raster(
             x_vec, np.arange(max_trials), 
             pred_array, 
               cmap=cmap,vmin=0,vmax=2,)
-    ax.set_ylabel(f'{taste}' + '\nTrial #')
-    ax.axvline(2000, color = 'r', linestyle = '--')
     return ax, im
 
 
@@ -106,7 +104,7 @@ def generate_raster_plot(
             sharex=True, sharey=True,
             figsize=(5,10))
     for taste in range(len(taste_pred_array_list)):
-        ax[taste], im = plot_raster(taste_pred_array_list[taste], ax = ax[taste], cmap = cmap)
+        ax[taste], im = plot_raster(taste_pred_array_list[taste], ax = ax[taste]) 
     ax[0].set_title('XGB')
     ax[-1].set_xlabel('Time (ms)')
     cbar_ax = fig.add_axes([0.98, 0.15, 0.02, 0.7])
