@@ -222,8 +222,23 @@ def generate_detailed_plot(segments_frame, raw_emg=None, trial_idx=0, taste_idx=
     return fig, ax
 
 if __name__ == "__main__":
-    # Load the segments frame
-    taste_frame_list = [x[1] for x in segment_frame.groupby('taste')]
+    # Example usage - this would normally be loaded from a file
+    # Create a sample segments_frame for demonstration
+    import pandas as pd
+    
+    # Sample data - in real usage, load your actual data
+    sample_segments = {
+        'taste': [0, 0, 0, 1, 1],
+        'trial': [0, 0, 1, 0, 0],
+        'segment_bounds': [(100, 200), (300, 400), (150, 250), (100, 200), (300, 400)],
+        'pred': [1, 2, 1, 2, 1],
+        'pred_names': ['gape', 'MTMs', 'gape', 'MTMs', 'gape']
+    }
+    
+    sample_frame = pd.DataFrame(sample_segments)
+    
+    # Generate visualization from sample data
+    taste_frame_list = [x[1] for x in sample_frame.groupby('taste')]
     taste_pred_array_list = [return_pred_array(this_taste_frame) for this_taste_frame in tqdm(taste_frame_list)]
 
     event_color_map = {
@@ -235,6 +250,15 @@ if __name__ == "__main__":
 
     # Generate the plot
     fig, ax = generate_raster_plot(
-            segments_frame = segment_frame,
+            segments_frame = sample_frame,
+            session_name = "Example Visualization"
+            )
+    plt.show()
+    
+    # Example of detailed plot
+    fig, ax = generate_detailed_plot(
+            segments_frame = sample_frame,
+            trial_idx = 0,
+            taste_idx = 0
             )
     plt.show()
