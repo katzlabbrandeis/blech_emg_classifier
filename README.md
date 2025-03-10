@@ -14,6 +14,7 @@ This repository contains code for classifying EMG (electromyography) movement pa
 ├── src/                    # Source code
 │   ├── ClassifierHandler.py # Main classifier interface
 │   ├── preprocessing.py     # Data preprocessing functions
+│   ├── visualize.py        # Visualization functions
 │   └── run_flow.py         # Example usage script
 └── requirements.txt        # Python dependencies
 ```
@@ -87,7 +88,7 @@ The classifier identifies 3 movement types:
 - Gape (1)
 - MTMs (2)
 
-See `run_flow.py` for a complete example.
+See `run_flow.py` for a complete example of both classification and visualization.
 
 ## Components
 
@@ -106,6 +107,14 @@ Contains functions for:
 - Feature calculation (duration, amplitude, intervals etc.)
 - PCA transformation
 - Data scaling
+
+### visualize.py
+
+Contains functions for visualizing classification results:
+- `generate_raster_plot`: Creates raster plots showing movement types across trials
+- `generate_detailed_plot`: Detailed visualization of a single trial with raw EMG and classifications
+- `plot_env_pred_overlay`: Grid visualization of all trials with EMG signals and overlaid classifications
+- Helper functions for data formatting and plotting
 
 ### Artifacts
 
