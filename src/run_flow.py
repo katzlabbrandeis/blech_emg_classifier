@@ -25,7 +25,9 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from ClassifierHandler import ClassifierHandler, get_paths
-from visualize import generate_raster_plot, generate_detailed_plot
+from visualize import (
+        generate_raster_plot, generate_detailed_plot, plot_env_pred_overlay
+        )
 
 # Get paths to model artifacts (PCA, scaler objects) and output directories
 # artifacts_dir: Contains PCA, scaler objects, and event code mappings
@@ -89,5 +91,12 @@ fig, ax = generate_detailed_plot(
     raw_emg=env,
     trial_idx=0,
     taste_idx=0
+)
+plt.show()
+
+# Generate detailed plots for all trials
+fig, ax = plot_env_pred_overlay(
+    segments_frame=segment_frame,
+    raw_emg=env,
 )
 plt.show()

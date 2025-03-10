@@ -15,8 +15,9 @@ import matplotlib.pyplot as plt
 import os
 from matplotlib.colors import ListedColormap
 import matplotlib as mpl
+from matplotlib.patches import Patch
 from sklearn.preprocessing import StandardScaler
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 def return_pred_array(taste_frame):
     """
@@ -195,13 +196,6 @@ def generate_detailed_plot(segments_frame, raw_emg=None, trial_idx=0, taste_idx=
         # Plot the segment classification
         class_ax.axvspan(start, end, alpha=0.5, color=color)
         
-        # Add text label in the middle of the segment
-        mid_point = (start + end) // 2
-        class_ax.text(mid_point, 0.5, segment.pred_names, 
-                     horizontalalignment='center',
-                     verticalalignment='center',
-                     transform=class_ax.get_xaxis_transform())
-    
     # Add legend
     from matplotlib.patches import Patch
     legend_elements = [
@@ -219,6 +213,79 @@ def generate_detailed_plot(segments_frame, raw_emg=None, trial_idx=0, taste_idx=
         class_ax.set_xlabel('Time (ms)')
     
     plt.tight_layout()
+    return fig, ax
+
+def plot_env_pred_overlay(
+        segments_frame,
+        raw_emg,
+        cmap = None,
+        ):
+    """
+    Plot the raw EMG signal with overlaid movement predictions.
+
+    Inputs:
+        segments_frame : pd.DataFrame
+        raw_emg : np.array, shape : (tastes, trials, time)
+
+    Outputs:
+        fig, ax : matplotlib figure and axis objects
+    """
+
+    if cmap is None:
+        event_color_map = {
+            0: '#D1D1D1',  # Nothing/No movement
+            1: '#EF8636',  # Gape
+            2: '#3B75AF',  # MTMs
+        }
+
+    # Check segments_frame has a single basename
+    if 'basename' in segments_frame.columns:
+        assert len(segments_frame.basename.unique()) == 1
+
+    fig, ax = plt.subplots(
+            nrows=raw_emg.shape[1],
+            ncols=raw_emg.shape[0],
+            figsize=(10, 10),
+            sharex=True, sharey=True,
+            )
+    for taste in range(raw_emg.shape[0]):
+        for trial in trange(raw_emg.shape[1]):
+            this_ax = ax[trial, taste]
+            this_emg = raw_emg[taste, trial, :]
+            this_ax.plot(this_emg, 'k-', linewidth=0.8)
+            if taste == 0:
+                this_ax.set_ylabel(f'Trial\n{trial}')
+            if trial == raw_emg.shape[1] - 1:
+                this_ax.set_xlabel('Time (ms)')
+            if trial == 0:
+                this_ax.set_title(f'Taste {taste}')
+            # Overlay predictions
+            for _, segment in segments_frame.iterrows():
+                if segment.taste == taste and segment.trial == trial:
+                    start, end = segment.segment_bounds
+                    pred = segment.pred
+                    color = event_color_map[pred]
+                    this_ax.axvspan(start, end, alpha=0.5, color=color)
+    # Add legend
+    if cmap: 
+        legend_elements = [
+            Patch(facecolor=cmap(0), alpha=0.5, label='Nothing'),
+            Patch(facecolor=cmap(1), alpha=0.5, label='Gape'),
+            Patch(facecolor=cmap(2), alpha=0.5, label='MTMs')
+            ]
+    else:
+        legend_elements = [
+            Patch(facecolor=event_color_map[0], alpha=0.5, label='Nothing'),
+            Patch(facecolor=event_color_map[1], alpha=0.5, label='Gape'),
+            Patch(facecolor=event_color_map[2], alpha=0.5, label='MTMs')
+            ]
+    # Put legend at bottom of figure
+    fig.legend( 
+            handles=legend_elements,
+            loc='lower center',
+            ncol=3,
+            )
+
     return fig, ax
 
 if __name__ == "__main__":
