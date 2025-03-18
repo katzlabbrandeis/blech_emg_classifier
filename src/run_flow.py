@@ -75,7 +75,7 @@ this_handler = ClassifierHandler(
 #   * Extracted features
 #   * Timing information
 #   * Predicted movement types
-y_pred, segment_frame = this_handler.parse_and_predict()
+y_pred, segment_frame, feature_names = this_handler.parse_and_predict()
 
 # Plot the predictions - overview raster plot
 fig, ax = generate_raster_plot(

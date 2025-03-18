@@ -156,6 +156,7 @@ class ClassifierHandler():
         all_features = np.stack(segment_frame.features.values)
         # scaled_segments are the normalized EMG traces themselves
         scaled_segments = np.stack(segment_frame.segment_norm_interp.values)
+        # All features is modified to ensure it has the same shape as scaled_features
         all_features, feature_names, scaled_features = \
             self.generate_final_features(all_features, feature_names, scaled_segments,
                                          artifact_dir=self.output_dir)
@@ -259,4 +260,4 @@ class ClassifierHandler():
         segment_frame['pred_names'] = y_pred_names
         segment_frame['pred_proba'] = list(y_pred_proba)
         self.segment_frame = segment_frame
-        return y_pred, segment_frame
+        return y_pred, segment_frame, feature_names

@@ -269,7 +269,8 @@ def run_AM_process(envs, pre_stim=2000):
 
         assert len(segment_starts) == len(segment_ends) == len(segment_dat), \
             'Mismatch in segment lengths'
-
+            
+        # Features contain baseline-normalized amplitude
         (feature_array,
          feature_names,
          segment_dat,
