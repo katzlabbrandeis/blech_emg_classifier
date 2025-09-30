@@ -51,8 +51,8 @@ class ClassifierHandler():
         """
         env = np.load(self.env_path)
         # If nans are present
-        non_nan_trials = ~np.isnan(env).any(axis = (0,2))
-        env = env[:,non_nan_trials,:]
+        # non_nan_trials = ~np.isnan(env).any(axis = (0,2))
+        # env = env[:,non_nan_trials,:]
         return env
 
     def run_pre_process(self):

@@ -153,6 +153,9 @@ def run_AM_process(envs, pre_stim=2000):
     segment_dat_list = []
     inds = list(np.ndindex(envs.shape[:-1]))
 
+    # Handling of nans
+    inds = [x for x in inds if not any(np.isnan(envs[x]))]
+
     for this_ind in inds:
         this_trial_dat = envs[this_ind]
 
