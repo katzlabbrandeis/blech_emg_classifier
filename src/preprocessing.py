@@ -1,3 +1,37 @@
+"""
+Preprocessing Module
+
+This module provides comprehensive functionality for processing EMG signals and
+extracting relevant features for movement classification.
+
+Key Components:
+    - Movement detection and extraction
+    - Signal normalization and standardization
+    - Feature extraction including:
+        * Duration measurements
+        * Amplitude analysis
+        * Interval calculations
+        * Frequency analysis
+        * PCA transformation
+
+The module supports both single-trial and batch processing of EMG data,
+with functions organized in a pipeline from raw signal processing to
+feature generation.
+
+Functions:
+    extract_movements: Detects and extracts movement segments
+    normalize_segments: Normalizes movement segments
+    extract_features: Generates features from movement segments
+    run_AM_process: Runs complete analysis pipeline
+    generate_final_features: Prepares final feature set for classification
+
+Dependencies:
+    - numpy
+    - scipy
+    - sklearn
+    - pandas
+"""
+
 import sys
 import os
 import numpy as np
@@ -9,11 +43,33 @@ from sklearn.preprocessing import StandardScaler
 from time import time
 from pickle import dump, load
 
-def extract_movements(this_trial_dat, size = 250):
+
+def extract_movements(this_trial_dat, size=250):
+    """
+    Detect and extract movement segments from EMG signal using white tophat filtering.
+
+    Args:
+        this_trial_dat (np.array): Raw EMG signal data
+        size (int, optional): Size of the structuring element for white tophat. Defaults to 250.
+
+    Returns:
+        tuple: Contains:
+            - segment_starts (np.array): Indices where movements begin
+            - segment_ends (np.array): Indices where movements end
+            - segment_dat (list): Raw EMG data for each movement segment
+            - filtered_segment_dat (list): Filtered EMG data for each movement segment
+    """
+    # Apply white tophat filter to enhance peaks and remove baseline
     filtered_dat = white_tophat(this_trial_dat, size=size)
+
+    # Get indices where signal is non-zero after filtering
     segments_raw = np.where(filtered_dat)[0]
+
+    # Create binary mask of movement segments
     segments = np.zeros_like(filtered_dat)
     segments[segments_raw] = 1
+
+    # Find transitions from 0->1 (starts) and 1->0 (ends) using diff
     segment_starts = np.where(np.diff(segments) == 1)[0]
     segment_ends = np.where(np.diff(segments) == -1)[0]
     # If first start is after first end, drop first end
@@ -27,46 +83,79 @@ def extract_movements(this_trial_dat, size = 250):
                             for x, y in zip(segment_starts, segment_ends)]
     return segment_starts, segment_ends, segment_dat, filtered_segment_dat
 
+
 def threshold_movement_lengths(
         segment_starts,
         segment_ends,
         segment_dat,
-        min_len = 50,
-        max_len = 500):
+        min_len=50,
+        max_len=500):
     """
-    Threshold movement lengths
+    Filter movement segments based on their duration.
+
+    Args:
+        segment_starts (np.array): Start indices of segments
+        segment_ends (np.array): End indices of segments
+        segment_dat (list): List of segment data
+        min_len (int, optional): Minimum allowed segment length. Defaults to 50.
+        max_len (int, optional): Maximum allowed segment length. Defaults to 500.
+
+    Returns:
+        tuple: Contains filtered:
+            - segment_starts (np.array): Start indices of valid segments
+            - segment_ends (np.array): End indices of valid segments
+            - segment_dat (list): Data of valid segments
     """
-    keep_inds = [x for x, y in enumerate(segment_dat) if len(y) > min_len and len(y) < max_len]
+    keep_inds = [x for x, y in enumerate(segment_dat) if len(
+        y) > min_len and len(y) < max_len]
     segment_starts = segment_starts[keep_inds]
     segment_ends = segment_ends[keep_inds]
     segment_dat = [segment_dat[x] for x in keep_inds]
     return segment_starts, segment_ends, segment_dat
 
+
 def normalize_segments(segment_dat):
     """
-    Perform min-max normalization on each segment
-    And make length of each segment equal 100 
+    Normalize movement segments using min-max scaling and interpolate to fixed length.
+
+    Args:
+        segment_dat (list): List of movement segments with varying lengths
+
+    Returns:
+        np.array: Array of normalized segments, each with length 100 and
+                 values scaled between 0 and 1
     """
+    # Find longest segment length (not used but kept for reference)
     max_len = max([len(x) for x in segment_dat])
+
+    # Interpolate each segment to fixed length of 100 points
+    # This makes segments comparable regardless of original duration
     interp_segment_dat = [np.interp(
-        np.linspace(0, 1, 100),
+        np.linspace(0, 1, 100),  # Target x-coordinates (0 to 1, 100 points)
+        # Source x-coordinates (0 to 1, original length)
         np.linspace(0, 1, len(x)),
-        x)
+        x)  # Source y-coordinates (original signal values)
         for x in segment_dat]
+
+    # Stack segments into 2D array (n_segments x 100)
     interp_segment_dat = np.vstack(interp_segment_dat)
-    # Normalize
+
+    # Min-max normalization along time axis
+    # Subtract minimum of each segment
     interp_segment_dat = interp_segment_dat - \
         np.min(interp_segment_dat, axis=-1)[:, None]
+    # Divide by maximum of each segment to get range [0,1]
     interp_segment_dat = interp_segment_dat / \
         np.max(interp_segment_dat, axis=-1)[:, None]
     return interp_segment_dat
 
+
 def extract_features(
-        segment_dat, 
-        segment_starts, 
+        segment_dat,
+        segment_starts,
         segment_ends,
-        mean_prestim = None
-        ):
+        mean_prestim=None
+):
     """
     Function to extract features from a list of segments
     Applied to a single trial
@@ -74,7 +163,7 @@ def extract_features(
     # Features to extract
     # 1. Duration of movement
     # 2. Amplitude
-    # 3. Left and Right intervals
+    # 3. Left and Right intervals (time between consecutive peaks)
 
     # No need to calculate PCA of time-adjusted waveform at this stage
     # as it's better to do it over the entire dataset
@@ -84,7 +173,9 @@ def extract_features(
 
     If mean_prestim is provided, also return normalized amplitude
     """
+    # Find peak location within each segment
     peak_inds = [np.argmax(x) for x in segment_dat]
+    # Convert to absolute time by adding segment start times
     peak_times = [x+y for x, y in zip(segment_starts, peak_inds)]
     # Drop first and last segments because we can't get intervals for them
     segment_dat = segment_dat[1:-1]
@@ -124,28 +215,35 @@ def extract_features(
         feature_list.append(amplitude_norm)
         feature_names.append('amplitude_norm')
 
-    feature_array = np.stack(feature_list, axis=-1) 
+    feature_array = np.stack(feature_list, axis=-1)
 
     return (
-            feature_array, 
-            feature_names, 
-            segment_dat, 
-            segment_starts, 
-            segment_ends, 
-            norm_interp_segment_dat
-            )
+        feature_array,
+        feature_names,
+        segment_dat,
+        segment_starts,
+        segment_ends,
+        norm_interp_segment_dat
+    )
+
 
 def run_AM_process(envs, pre_stim=2000):
     """
-    Run AM process on envs from a single session
+    Process EMG envelopes to extract movement segments and features.
 
-    Inputs:
-        envs (np.array): Array of shape (tastes, trials, time)
+    Args:
+        envs (np.array): Array of EMG envelopes with shape (tastes, trials, time)
+        pre_stim (int, optional): Number of pre-stimulus timepoints. Defaults to 2000.
 
-    Outputs:
-        segment_dat_list (list): List of segment data
-        feature_names (np.array): Array of feature names
-        inds (list): List of indices
+    Returns:
+        tuple: Contains:
+            - segment_dat_list (list): List of processed segments containing:
+                * feature arrays
+                * raw segment data
+                * normalized interpolated segments
+                * segment bounds
+            - feature_names (np.array): Names of extracted features
+            - inds (list): List of (taste, trial) index tuples
     """
     this_day_prestim_dat = envs[..., :pre_stim]
     mean_prestim = np.mean(this_day_prestim_dat, axis=None)
@@ -163,7 +261,7 @@ def run_AM_process(envs, pre_stim=2000):
             segment_starts,
             segment_ends,
             segment_dat,
-           filtered_segment_dat
+            filtered_segment_dat
         ) = extract_movements(
             this_trial_dat, size=200)
 
@@ -174,7 +272,8 @@ def run_AM_process(envs, pre_stim=2000):
 
         assert len(segment_starts) == len(segment_ends) == len(segment_dat), \
             'Mismatch in segment lengths'
-
+            
+        # Features contain baseline-normalized amplitude
         (feature_array,
          feature_names,
          segment_dat,
@@ -182,52 +281,62 @@ def run_AM_process(envs, pre_stim=2000):
          segment_ends,
          norm_interp_segment_dat,
          ) = extract_features(
-            segment_dat, segment_starts, segment_ends, mean_prestim = mean_prestim)
+            segment_dat, segment_starts, segment_ends, mean_prestim=mean_prestim)
 
         assert len(feature_array) == len(segment_dat) == len(segment_starts) == len(segment_ends), \
             'Mismatch in feature array lengths'
 
         segment_bounds = list(zip(segment_starts, segment_ends))
-        merged_dat = [feature_array, segment_dat, norm_interp_segment_dat, segment_bounds]
+        merged_dat = [feature_array, segment_dat,
+                      norm_interp_segment_dat, segment_bounds]
         segment_dat_list.append(merged_dat)
 
     return segment_dat_list, feature_names, inds
 
+
 def parse_segment_dat_list(this_segment_dat_list, inds):
     """
-    Generate a dataframe with the following columns from segment_dat_list:
-    channel, taste, trial, segment_num, features, segment_raw, segment_bounds
+    Convert segment data list into a structured pandas DataFrame.
 
-    Inputs:
-    segment_dat_list : list of lists
-        - Each entry in list is a single trial
-    inds: list of tuples
-        - Each tuple is (taste, trial)
+    Args:
+        this_segment_dat_list (list): List of lists where each entry contains:
+            - features: Extracted feature array
+            - segment_raw: Raw segment data
+            - segment_norm_interp: Normalized interpolated segments
+            - segment_bounds: Start and end indices
+        inds (list): List of (taste, trial) tuples identifying each trial
 
     Returns:
-    gape_frame : pandas dataframe
+        pd.DataFrame: DataFrame with columns:
+            - features: Extracted feature array
+            - segment_raw: Raw segment data
+            - segment_norm_interp: Normalized interpolated segments
+            - segment_bounds: Start and end indices
+            - taste: Taste condition
+            - trial: Trial number
     """
 
     # Standardize features
     wanted_data = dict(
-        features = [x[0] for x in this_segment_dat_list],
-        segment_raw = [x[1] for x in this_segment_dat_list],
-        segment_norm_interp = [x[2] for x in this_segment_dat_list],
-        segment_bounds = [x[3] for x in this_segment_dat_list],
-        )
+        features=[x[0] for x in this_segment_dat_list],
+        segment_raw=[x[1] for x in this_segment_dat_list],
+        segment_norm_interp=[x[2] for x in this_segment_dat_list],
+        segment_bounds=[x[3] for x in this_segment_dat_list],
+    )
     gape_frame = pd.DataFrame(wanted_data)
     gape_frame['taste'] = [x[0] for x in inds]
     gape_frame['trial'] = [x[1] for x in inds]
     gape_frame = gape_frame.explode(list(wanted_data.keys()))
     return gape_frame
 
+
 def generate_final_features(
-        all_features, 
-        feature_names, 
+        all_features,
+        feature_names,
         scaled_segments,
-        artifact_dir, 
-        create_new_objs = False
-        ):
+        artifact_dir,
+        create_new_objs=False
+):
     """
     Generate final features for classification
 
@@ -261,15 +370,16 @@ def generate_final_features(
             pca_obj = load(open(pca_save_path, 'rb'))
             scale_obj = load(open(scale_save_path, 'rb'))
         else:
-            raise ValueError('PCA and scale object not found and create_new_objs is False')
+            raise ValueError(
+                'PCA and scale object not found and create_new_objs is False')
 
     # Drop 'amplitude_abs' from features
-    drop_inds = [i for i, x in enumerate(feature_names) if 'amplitude_abs' in x]
+    drop_inds = [i for i, x in enumerate(
+        feature_names) if 'amplitude_abs' in x]
     all_features = np.delete(all_features, drop_inds, axis=1)
     feature_names = np.delete(feature_names, drop_inds)
 
     # Get PCA features
-    pca_obj.fit(scaled_segments)
     if create_new_objs:
         pca_obj.fit(scaled_segments)
     pca_features = pca_obj.transform(scaled_segments)[:, :3]
@@ -286,7 +396,7 @@ def generate_final_features(
     pca_feature_names = ['pca_{}'.format(i) for i in range(3)]
     feature_names = np.concatenate([feature_names, pca_feature_names])
 
-    if artifact_dir is not None:
+    if artifact_dir is not None and create_new_objs:
         dump(pca_obj, open(pca_save_path, 'wb'))
         dump(scale_obj, open(scale_save_path, 'wb'))
 
