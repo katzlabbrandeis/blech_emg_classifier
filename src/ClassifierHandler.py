@@ -113,13 +113,6 @@ class ClassifierHandler():
         """
         # Load the EMG envelope data array
         env = np.load(self.env_path)
-
-        # Remove any trials containing NaN values across all tastes and timepoints
-        # axis=(0,2) checks across tastes (0) and timepoints (2) for each trial
-        non_nan_trials = ~np.isnan(env).any(axis=(0, 2))
-
-        # Keep only the valid trials by boolean indexing
-        env = env[:, non_nan_trials, :]
         return env
 
     def run_pre_process(self):
