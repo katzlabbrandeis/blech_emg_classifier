@@ -292,6 +292,161 @@ def plot_env_pred_overlay(
 
     return fig, ax
 
+def generate_raster_with_envelope(
+        segments_frame: pd.DataFrame,
+        raw_emg: np.ndarray,
+        session_name: str = None,
+        taste_names: list = None,
+        ):
+    """
+    Generate a raster plot of predictions around taste delivery with envelope overlay.
+    
+    This function creates a comprehensive visualization showing both the raster plot
+    of movement classifications and the raw EMG envelope signals for each taste.
+    Each taste gets its own subplot showing trials as rows with predictions overlaid
+    on the EMG envelope.
+
+    Inputs:
+        segments_frame : pd.DataFrame
+            DataFrame containing the segments with classification results
+        raw_emg : np.ndarray
+            Raw EMG envelope data with shape (n_tastes, n_trials, n_timepoints)
+        session_name : str, optional
+            Name of the session to display in the plot title
+        taste_names : list, optional
+            List of taste names for labeling. If None, uses "Taste 0", "Taste 1", etc.
+
+    Outputs:
+        fig, ax : matplotlib figure and axis objects
+    """
+    # Check segments_frame has a single basename
+    if 'basename' in segments_frame.columns:
+        assert len(segments_frame.basename.unique()) == 1
+
+    # Set up color map for predictions
+    event_color_map = {
+        0: '#D1D1D1',  # Nothing/No movement
+        1: '#EF8636',  # Gape
+        2: '#3B75AF',  # MTMs
+    }
+    cmap = ListedColormap(list(event_color_map.values()), name='NBT_cmap')
+
+    # Convert segments frame to np arrays by taste
+    taste_frame_list = [x[1] for x in segments_frame.groupby('taste')]
+    taste_pred_array_list = [return_pred_array(this_taste_frame) 
+                            for this_taste_frame in taste_frame_list]
+    
+    n_tastes = len(taste_pred_array_list)
+    
+    # Create figure with subplots for each taste
+    fig, axes = plt.subplots(
+        n_tastes, 2,
+        figsize=(12, 3 * n_tastes),
+        gridspec_kw={'width_ratios': [3, 1]},
+        sharex='col'
+    )
+    
+    # Handle case with only one taste
+    if n_tastes == 1:
+        axes = axes.reshape(1, -1)
+    
+    for taste_idx in range(n_tastes):
+        # Left subplot: EMG envelope with prediction overlay
+        ax_env = axes[taste_idx, 0]
+        
+        # Get EMG data for this taste
+        taste_emg = raw_emg[taste_idx, :, :]
+        n_trials = taste_emg.shape[0]
+        n_timepoints = taste_emg.shape[1]
+        
+        # Normalize each trial's EMG for visualization
+        taste_emg_norm = np.zeros_like(taste_emg)
+        for trial_idx in range(n_trials):
+            trial_emg = taste_emg[trial_idx, :]
+            # Normalize using median absolute deviation for robustness
+            trial_mad = median_absolute_deviation(trial_emg)
+            if trial_mad > 0:
+                taste_emg_norm[trial_idx, :] = trial_emg / trial_mad
+            else:
+                taste_emg_norm[trial_idx, :] = trial_emg
+        
+        # Plot each trial's envelope
+        for trial_idx in range(n_trials):
+            # Offset each trial for visibility
+            offset = trial_idx * 10
+            ax_env.plot(
+                np.arange(n_timepoints),
+                taste_emg_norm[trial_idx, :] + offset,
+                'k-',
+                linewidth=0.5,
+                alpha=0.7
+            )
+            
+            # Overlay predictions for this trial
+            trial_segments = segments_frame[
+                (segments_frame.taste == taste_idx) & 
+                (segments_frame.trial == trial_idx)
+            ]
+            
+            for _, segment in trial_segments.iterrows():
+                start, end = segment.segment_bounds
+                pred = segment.pred
+                color = event_color_map[pred]
+                
+                # Draw colored rectangle behind the envelope
+                ax_env.axvspan(
+                    start, end,
+                    ymin=(offset - 5) / (n_trials * 10 + 5),
+                    ymax=(offset + 5) / (n_trials * 10 + 5),
+                    alpha=0.4,
+                    color=color
+                )
+        
+        # Set labels for envelope plot
+        taste_label = taste_names[taste_idx] if taste_names else f'Taste {taste_idx}'
+        ax_env.set_ylabel(f'{taste_label}\nTrial (offset)')
+        ax_env.set_yticks([])
+        
+        if taste_idx == n_tastes - 1:
+            ax_env.set_xlabel('Time (ms)')
+        
+        # Right subplot: Raster plot of predictions
+        ax_raster = axes[taste_idx, 1]
+        
+        pred_array = taste_pred_array_list[taste_idx]
+        max_trials = pred_array.shape[0]
+        x_vec = np.arange(pred_array.shape[1])
+        
+        im = ax_raster.pcolormesh(
+            x_vec, np.arange(max_trials),
+            pred_array,
+            cmap=cmap, vmin=0, vmax=2,
+            shading='auto'
+        )
+        
+        ax_raster.set_ylabel('Trial #')
+        
+        if taste_idx == n_tastes - 1:
+            ax_raster.set_xlabel('Time (ms)')
+    
+    # Add title
+    if session_name:
+        fig.suptitle(f'{session_name} - Predictions with EMG Envelope', 
+                    fontsize=14, y=0.995)
+    else:
+        fig.suptitle('Predictions with EMG Envelope', fontsize=14, y=0.995)
+    
+    # Add colorbar for raster plots
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+    cbar = fig.colorbar(im, cax=cbar_ax)
+    cbar.set_ticks([0.5, 1, 1.5])
+    cbar.set_ticklabels(['nothing', 'gape', 'MTMs'])
+    cbar.set_label('Movement Type')
+    
+    plt.tight_layout(rect=[0, 0, 0.9, 0.99])
+    
+    return fig, axes
+
 if __name__ == "__main__":
     # Example usage - this would normally be loaded from a file
     # Create a sample segments_frame for demonstration
