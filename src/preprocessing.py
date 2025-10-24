@@ -42,6 +42,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from time import time
 from pickle import dump, load
+from copy import deepcopy
 
 
 def extract_movements(this_trial_dat, size=250):
@@ -367,8 +368,10 @@ def generate_final_features(
     else:
         if os.path.exists(pca_save_path) and os.path.exists(scale_save_path):
             print('PCA and scale objects found, loading')
-            pca_obj = load(open(pca_save_path, 'rb'))
-            scale_obj = load(open(scale_save_path, 'rb'))
+            with open(pca_save_path, 'rb') as f:
+                pca_obj = deepcopy(load(f))
+            with open(scale_save_path, 'rb') as f:
+                scale_obj = deepcopy(load(f))
         else:
             raise ValueError(
                 'PCA and scale object not found and create_new_objs is False')
@@ -397,7 +400,9 @@ def generate_final_features(
     feature_names = np.concatenate([feature_names, pca_feature_names])
 
     if artifact_dir is not None and create_new_objs:
-        dump(pca_obj, open(pca_save_path, 'wb'))
-        dump(scale_obj, open(scale_save_path, 'wb'))
+        with open(pca_save_path, 'wb') as f:
+            dump(pca_obj, f)
+        with open(scale_save_path, 'wb') as f:
+            dump(scale_obj, f)
 
     return all_features, feature_names, scaled_features
