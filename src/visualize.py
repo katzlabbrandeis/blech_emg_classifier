@@ -17,7 +17,7 @@ from matplotlib.colors import ListedColormap
 import matplotlib as mpl
 from matplotlib.patches import Patch
 from sklearn.preprocessing import StandardScaler
-from scipy.stats import median_absolute_deviation
+from scipy.stats import median_abs_deviation
 from tqdm import tqdm, trange
 
 def return_pred_array(taste_frame):
@@ -255,7 +255,7 @@ def plot_env_pred_overlay(
             this_emg = raw_emg[taste, trial, :]
             this_ax.plot(this_emg, 'k-', linewidth=0.8)
             # Set y-limits based on median absolute deviation
-            this_emg_mad = median_absolute_deviation(this_emg)
+            this_emg_mad = median_abs_deviation(this_emg)
             this_ax.set_ylim(-5 * this_emg_mad, 5 * this_emg_mad)
             if taste == 0:
                 this_ax.set_ylabel(f'Trial\n{trial}')
