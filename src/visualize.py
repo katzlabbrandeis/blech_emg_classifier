@@ -252,6 +252,7 @@ def plot_env_pred_overlay(
         segments_frame,
         raw_emg,
         cmap = None,
+        mad_scale = 5,
         ):
     """
     Create a comprehensive grid plot showing raw EMG signals with overlaid predictions.
@@ -276,6 +277,7 @@ def plot_env_pred_overlay(
                                                      - Orange (#EF8636): Gape
                                                      - Blue (#3B75AF): MTMs
                                                      Defaults to None.
+        mad_scale (float, optional): Scaling factor for median absolute deviation
 
     Returns:
         tuple: Contains two elements:
@@ -307,14 +309,18 @@ def plot_env_pred_overlay(
             figsize=(10, 10),
             sharex=True, sharey=True,
             )
+    median_value = np.median(raw_emg[~np.isnan(raw_emg)])
+    mad_value = median_abs_deviation(raw_emg[~np.isnan(raw_emg)])
+    y_lims = (-median_value, median_value + mad_scale * mad_value)
     for taste in range(raw_emg.shape[0]):
         for trial in trange(raw_emg.shape[1]):
             this_ax = ax[trial, taste]
             this_emg = raw_emg[taste, trial, :]
+            if this_emg is None or np.all(np.isnan(this_emg)):
+                continue
             this_ax.plot(this_emg, 'k-', linewidth=0.8)
             # Set y-limits based on median absolute deviation
-            this_emg_mad = median_abs_deviation(this_emg)
-            this_ax.set_ylim(-5 * this_emg_mad, 5 * this_emg_mad)
+            this_ax.set_ylim(y_lims)
             if taste == 0:
                 this_ax.set_ylabel(f'Trial\n{trial}')
             if trial == raw_emg.shape[1] - 1:
