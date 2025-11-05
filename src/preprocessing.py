@@ -260,8 +260,9 @@ def run_AM_process(envs, pre_stim=2000):
             - feature_names (np.array): Names of extracted features
             - inds (list): List of (taste, trial) index tuples
     """
+
     this_day_prestim_dat = envs[..., :pre_stim]
-    mean_prestim = np.mean(this_day_prestim_dat, axis=None)
+    mean_prestim = np.nanmean(this_day_prestim_dat, axis=None)
 
     segment_dat_list = []
     inds = list(np.ndindex(envs.shape[:-1]))
