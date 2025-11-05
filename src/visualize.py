@@ -17,19 +17,36 @@ from matplotlib.colors import ListedColormap
 import matplotlib as mpl
 from matplotlib.patches import Patch
 from sklearn.preprocessing import StandardScaler
-from scipy.stats import median_absolute_deviation
+from scipy.stats import median_abs_deviation
 from tqdm import tqdm, trange
 
 def return_pred_array(taste_frame):
     """
-    Given a taste_frame, return a 2D array of predictions
-    
-    Inputs:
-        taste_frame : pd.DataFrame
+    Convert a DataFrame of segment predictions into a 2D time-series array.
 
-    Outputs:
-        pred_array : np.array
-            2D array with shape (n_trials, max_time)
+    This function takes a DataFrame containing movement segment predictions and
+    converts it into a 2D array where each row represents a trial and each column
+    represents a time point. Predictions are filled in for the duration of each
+    segment, with NaN values elsewhere.
+
+    Args:
+        taste_frame (pd.DataFrame): DataFrame containing segment data for a single taste.
+                                   Must have columns:
+                                   - 'taste': Taste identifier (must be unique)
+                                   - 'trial': Trial number
+                                   - 'segment_bounds': Tuple of (start, end) indices
+                                   - 'pred': Predicted movement class
+                                   Optional:
+                                   - 'basename': Session identifier (must be unique if present)
+
+    Returns:
+        np.array: 2D array with shape (n_trials, max_time) where:
+                 - n_trials: Maximum trial number + 1
+                 - max_time: Rounded up to nearest 100 samples
+                 - Values are prediction classes during segments, NaN elsewhere
+
+    Raises:
+        AssertionError: If taste_frame contains multiple tastes or basenames
     """
 
     assert len(taste_frame.taste.unique()) == 1
@@ -54,15 +71,30 @@ def plot_raster(
         cmap = None,
     ):
     """
-    Plot a raster of predictions
+    Create a color-coded raster plot of movement predictions over time.
 
-    Inputs:
-        pred_array : np.array, shape (n_trials, max_time)
-        ax : matplotlib axis
-        cmap : matplotlib colormap
+    This function generates a heatmap-style visualization where each row represents
+    a trial and colors indicate the type of movement at each time point.
 
-    Outputs:
-        ax : matplotlib axis
+    Args:
+        pred_array (np.array): Array of shape (n_trials, max_time) containing
+                              prediction values:
+                              - 0: No movement (gray)
+                              - 1: Gape (orange)
+                              - 2: MTMs/Mouth/Tongue Movements (blue)
+                              - NaN: No data
+        ax (matplotlib.axes.Axes, optional): Matplotlib axis to plot on.
+                                            If None, creates new figure and axis.
+                                            Defaults to None.
+        cmap (matplotlib.colors.Colormap, optional): Custom colormap for predictions.
+                                                     If None, uses default NBT colormap.
+                                                     Defaults to None.
+
+    Returns:
+        tuple: Contains two elements:
+            - ax (matplotlib.axes.Axes): The axis with the raster plot
+            - im (matplotlib.collections.QuadMesh): The pcolormesh image object
+                                                   for colorbar creation
     """
     if ax is None:
         fig, ax = plt.subplots()
@@ -222,14 +254,40 @@ def plot_env_pred_overlay(
         cmap = None,
         ):
     """
-    Plot the raw EMG signal with overlaid movement predictions.
+    Create a comprehensive grid plot showing raw EMG signals with overlaid predictions.
 
-    Inputs:
-        segments_frame : pd.DataFrame
-        raw_emg : np.array, shape : (tastes, trials, time)
+    This function generates a multi-panel visualization where each subplot shows
+    the raw EMG signal for a specific trial and taste, with color-coded overlays
+    indicating the predicted movement types during each segment.
 
-    Outputs:
-        fig, ax : matplotlib figure and axis objects
+    Args:
+        segments_frame (pd.DataFrame): DataFrame containing segment information with columns:
+                                      - 'taste': Taste condition index
+                                      - 'trial': Trial number
+                                      - 'segment_bounds': Tuple of (start, end) indices
+                                      - 'pred': Predicted movement class (0=nothing, 1=gape, 2=MTMs)
+                                      Optional:
+                                      - 'basename': Session identifier (must be unique if present)
+        raw_emg (np.array): Array of shape (n_tastes, n_trials, n_timepoints) containing
+                           raw EMG signal amplitudes
+        cmap (matplotlib.colors.Colormap, optional): Custom colormap for movement types.
+                                                     If None, uses default color scheme:
+                                                     - Gray (#D1D1D1): No movement
+                                                     - Orange (#EF8636): Gape
+                                                     - Blue (#3B75AF): MTMs
+                                                     Defaults to None.
+
+    Returns:
+        tuple: Contains two elements:
+            - fig (matplotlib.figure.Figure): The complete figure object
+            - ax (np.array): 2D array of matplotlib axes with shape (n_trials, n_tastes)
+
+    Raises:
+        AssertionError: If segments_frame contains multiple basenames
+
+    Note:
+        Y-axis limits are automatically set based on median absolute deviation (MAD)
+        to handle outliers and provide consistent scaling across subplots.
     """
 
     if cmap is None:
@@ -255,7 +313,7 @@ def plot_env_pred_overlay(
             this_emg = raw_emg[taste, trial, :]
             this_ax.plot(this_emg, 'k-', linewidth=0.8)
             # Set y-limits based on median absolute deviation
-            this_emg_mad = median_absolute_deviation(this_emg)
+            this_emg_mad = median_abs_deviation(this_emg)
             this_ax.set_ylim(-5 * this_emg_mad, 5 * this_emg_mad)
             if taste == 0:
                 this_ax.set_ylabel(f'Trial\n{trial}')

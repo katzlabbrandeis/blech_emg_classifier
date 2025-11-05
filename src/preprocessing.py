@@ -42,6 +42,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from time import time
 from pickle import dump, load
+from copy import deepcopy
 
 
 def extract_movements(this_trial_dat, size=250):
@@ -157,21 +158,35 @@ def extract_features(
         mean_prestim=None
 ):
     """
-    Function to extract features from a list of segments
-    Applied to a single trial
+    Extract temporal, amplitude, and frequency features from movement segments.
 
-    # Features to extract
-    # 1. Duration of movement
-    # 2. Amplitude
-    # 3. Left and Right intervals (time between consecutive peaks)
+    This function computes multiple features for each detected movement segment:
+    1. Duration: Length of the movement in samples
+    2. Amplitude: Peak amplitude of the movement
+    3. Left/Right intervals: Time between consecutive movement peaks
+    4. Maximum frequency: Dominant frequency from Welch power spectral density
+    5. Normalized waveforms: Time-normalized movement traces
 
-    # No need to calculate PCA of time-adjusted waveform at this stage
-    # as it's better to do it over the entire dataset
-    # 4. PCA of time-adjusted waveform
+    Args:
+        segment_dat (list): List of numpy arrays, each containing raw EMG data for one segment
+        segment_starts (np.array): Array of segment start indices
+        segment_ends (np.array): Array of segment end indices
+        mean_prestim (float, optional): Mean pre-stimulus baseline amplitude for normalization.
+                                       If provided, adds normalized amplitude feature. Defaults to None.
 
-    # 5. Normalized time-adjusted waveform
+    Returns:
+        tuple: Contains six elements:
+            - feature_array (np.array): Array of shape (n_segments-2, n_features) containing
+                                       extracted features for each segment
+            - feature_names (list): List of feature names corresponding to columns in feature_array
+            - segment_dat (list): Filtered list of segments (first and last removed)
+            - segment_starts (np.array): Filtered start indices (first and last removed)
+            - segment_ends (np.array): Filtered end indices (first and last removed)
+            - norm_interp_segment_dat (np.array): Normalized and interpolated segments,
+                                                  shape (n_segments-2, 100)
 
-    If mean_prestim is provided, also return normalized amplitude
+    Note:
+        First and last segments are dropped because interval features cannot be computed for them.
     """
     # Find peak location within each segment
     peak_inds = [np.argmax(x) for x in segment_dat]
@@ -339,24 +354,49 @@ def generate_final_features(
         create_new_objs=False
 ):
     """
-    Generate final features for classification
+    Generate final feature set for classification by adding PCA features and scaling.
 
-    Inputs:
-        all_features (np.array): Array of shape (n_segments, n_features)
-        feature_names (np.array): Array of shape (n_features,)
-            - Expected features:
-                - duration
-                - right_interval
-                - left_interval
-                - max_freq
-                - amplitude_abs
-                - amplitude_norm
-        scaled_segments (np.array): Array of shape (n_segments, n_time)
+    This function performs the final feature engineering steps:
+    1. Removes absolute amplitude features (keeping only normalized amplitude)
+    2. Applies PCA to normalized waveforms to extract 3 principal components
+    3. Concatenates PCA features with existing features
+    4. Standardizes all features using StandardScaler
+    5. Saves/loads PCA and scaler objects for consistent transformation
 
-    Outputs:
-        all_features (np.array): Array of shape (n_segments, n_features)
-        feature_names (np.array): Array of shape (n_features,)
-        scaled_features (np.array): Array of shape (n_segments, n_features)
+    Args:
+        all_features (np.array): Array of shape (n_segments, n_features) containing
+                                raw extracted features. Expected features include:
+                                - duration: Movement duration in samples
+                                - right_interval: Time to next movement peak
+                                - left_interval: Time from previous movement peak
+                                - max_freq: Dominant frequency from Welch PSD
+                                - amplitude_abs: Absolute peak amplitude
+                                - amplitude_norm: Baseline-normalized amplitude
+        feature_names (np.array): Array of shape (n_features,) with feature names
+        scaled_segments (np.array): Array of shape (n_segments, n_time) containing
+                                   normalized and interpolated movement waveforms
+        artifact_dir (str): Directory path for saving/loading PCA and scaler objects.
+                          If None, objects are not saved.
+        create_new_objs (bool, optional): If True, creates and fits new PCA and scaler objects.
+                                         If False, loads existing objects from artifact_dir.
+                                         Defaults to False.
+
+    Returns:
+        tuple: Contains three elements:
+            - all_features (np.array): Array of shape (n_segments, n_features_final) with
+                                      amplitude_abs removed and PCA features added
+            - feature_names (np.array): Array of shape (n_features_final,) with updated
+                                       feature names including 'pca_0', 'pca_1', 'pca_2'
+            - scaled_features (np.array): Array of shape (n_segments, n_features_final)
+                                         containing standardized features (mean=0, std=1)
+
+    Raises:
+        ValueError: If create_new_objs is False and PCA/scaler objects are not found
+                   in artifact_dir
+
+    Note:
+        The PCA and scaler objects are saved as 'pca_obj.pkl' and 'scale_obj.pkl'
+        in the artifact_dir when create_new_objs is True.
     """
 
     pca_save_path = os.path.join(artifact_dir, 'pca_obj.pkl')
@@ -368,8 +408,10 @@ def generate_final_features(
     else:
         if os.path.exists(pca_save_path) and os.path.exists(scale_save_path):
             print('PCA and scale objects found, loading')
-            pca_obj = load(open(pca_save_path, 'rb'))
-            scale_obj = load(open(scale_save_path, 'rb'))
+            with open(pca_save_path, 'rb') as f:
+                pca_obj = deepcopy(load(f))
+            with open(scale_save_path, 'rb') as f:
+                scale_obj = deepcopy(load(f))
         else:
             raise ValueError(
                 'PCA and scale object not found and create_new_objs is False')
@@ -398,7 +440,9 @@ def generate_final_features(
     feature_names = np.concatenate([feature_names, pca_feature_names])
 
     if artifact_dir is not None and create_new_objs:
-        dump(pca_obj, open(pca_save_path, 'wb'))
-        dump(scale_obj, open(scale_save_path, 'wb'))
+        with open(pca_save_path, 'wb') as f:
+            dump(pca_obj, f)
+        with open(scale_save_path, 'wb') as f:
+            dump(scale_obj, f)
 
     return all_features, feature_names, scaled_features
