@@ -26,7 +26,8 @@ import matplotlib.pyplot as plt
 
 from ClassifierHandler import ClassifierHandler, get_paths
 from visualize import (
-        generate_raster_plot, generate_detailed_plot, plot_env_pred_overlay
+        generate_raster_plot, generate_detailed_plot, plot_env_pred_overlay,
+        generate_raster_with_envelope
         )
 
 # Get paths to model artifacts (PCA, scaler objects) and output directories
@@ -98,5 +99,13 @@ plt.show()
 fig, ax = plot_env_pred_overlay(
     segments_frame=segment_frame,
     raw_emg=env,
+)
+plt.show()
+
+# Generate raster plot with envelope overlay (Issue #27)
+fig, ax = generate_raster_with_envelope(
+    segments_frame=segment_frame,
+    raw_emg=env,
+    session_name="EMG Classification Session"
 )
 plt.show()
