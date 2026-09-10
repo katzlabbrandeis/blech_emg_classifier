@@ -1,0 +1,132 @@
+{
+    "name": "NB27",
+    "exp_type": "test2",
+    "date": "230521",
+    "timestamp": "132723",
+    "regions": [
+        "emgad",
+        "emgsty",
+        "none"
+    ],
+    "ports": [
+        "D"
+    ],
+    "dig_ins": {
+        "filenames": [
+            "board-DIN-12.dat",
+            "board-DIN-13.dat",
+            "board-DIN-14.dat",
+            "board-DIN-15.dat"
+        ],
+        "count": 4,
+        "trial_counts": [
+            30,
+            30,
+            30,
+            30
+        ]
+    },
+    "emg": {
+        "port": [
+            "D"
+        ],
+        "electrodes": [
+            8,
+            9,
+            10,
+            11
+        ]
+    },
+    "electrode_layout": {
+        "emgad": [
+            [
+                8,
+                9
+            ]
+        ],
+        "emgsty": [
+            [
+                10,
+                11
+            ]
+        ],
+        "none": [
+            [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31
+            ]
+        ]
+    },
+    "taste_params": {
+        "dig_ins": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "filenames": [
+            "board-DIN-12.dat",
+            "board-DIN-13.dat",
+            "board-DIN-14.dat",
+            "board-DIN-15.dat"
+        ],
+        "trial_count": [
+            30,
+            30,
+            30,
+            30
+        ],
+        "tastes": [
+            "suc",
+            "nacl",
+            "ca",
+            "qhcl"
+        ],
+        "concs": [
+            0.3,
+            0.1,
+            0.1,
+            0.005
+        ],
+        "pal_rankings": [
+            4,
+            3,
+            2,
+            1
+        ]
+    },
+    "laser_params": {
+        "dig_in": [],
+        "filenames": [],
+        "trial_count": [],
+        "onset": null,
+        "duration": null
+    },
+    "notes": "paired with two videos"
+}

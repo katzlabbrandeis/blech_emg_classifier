@@ -8,6 +8,8 @@ repos:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-added-large-files
+        args:
+            - "--maxkb=10000"
     -   id: pretty-format-json
         args:
             - "--autofix"

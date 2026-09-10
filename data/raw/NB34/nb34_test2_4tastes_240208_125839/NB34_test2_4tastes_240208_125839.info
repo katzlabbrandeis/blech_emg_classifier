@@ -1,0 +1,125 @@
+{
+    "name": "NB34",
+    "exp_type": "test2",
+    "date": "240208",
+    "timestamp": "125839",
+    "regions": [
+        "emgad",
+        "none"
+    ],
+    "ports": [
+        "C"
+    ],
+    "dig_ins": {
+        "filenames": [
+            "board-DIN-12.dat",
+            "board-DIN-13.dat",
+            "board-DIN-14.dat",
+            "board-DIN-15.dat"
+        ],
+        "count": 4,
+        "trial_counts": [
+            30,
+            30,
+            30,
+            30
+        ]
+    },
+    "emg": {
+        "port": [
+            "C"
+        ],
+        "electrodes": [
+            26,
+            28
+        ]
+    },
+    "electrode_layout": {
+        "emgad": [
+            [
+                26,
+                28
+            ]
+        ],
+        "none": [
+            [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                27,
+                29,
+                30,
+                31
+            ]
+        ]
+    },
+    "taste_params": {
+        "dig_ins": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "filenames": [
+            "board-DIN-12.dat",
+            "board-DIN-13.dat",
+            "board-DIN-14.dat",
+            "board-DIN-15.dat"
+        ],
+        "trial_count": [
+            30,
+            30,
+            30,
+            30
+        ],
+        "tastes": [
+            "water",
+            "suc",
+            "nacl",
+            "qhcl"
+        ],
+        "concs": [
+            0.0,
+            0.3,
+            0.01,
+            0.003
+        ],
+        "pal_rankings": [
+            2,
+            4,
+            3,
+            1
+        ]
+    },
+    "laser_params": {
+        "dig_in": [],
+        "filenames": [],
+        "trial_count": [],
+        "onset": null,
+        "duration": null
+    },
+    "notes": "EMG on different channels from test day 1 and 3"
+}

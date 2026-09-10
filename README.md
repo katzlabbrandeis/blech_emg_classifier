@@ -11,12 +11,15 @@ This repository contains code for classifying EMG (electromyography) movement pa
 │   ├── pca_obj.pkl         # PCA transformation object
 │   ├── scale_obj.pkl       # Data scaling object
 │   └── event_code_dict.json # Movement type mappings
+├── data/                    # Training dataset + raw data it was derived from (see below)
 ├── src/                    # Source code
 │   ├── ClassifierHandler.py # Main classifier interface
 │   ├── preprocessing.py     # Data preprocessing functions
 │   ├── visualize.py        # Visualization functions
-│   └── run_flow.py         # Example usage script
-└── requirements.txt        # Python dependencies
+│   ├── run_flow.py         # Example usage script
+│   └── training_pipeline/  # Scripts that build the training dataset and train the model
+├── requirements.txt        # Python dependencies (inference)
+└── requirements-training.txt # Extra dependencies for src/training_pipeline/
 ```
 
 ## Installation
@@ -258,6 +261,22 @@ Contains functions for visualizing classification results:
 - `pca_obj.pkl`: Fitted PCA transformation
 - `scale_obj.pkl`: Fitted data scaler
 - `event_code_dict.json`: Movement type label mappings
+
+## Training Data & Provenance
+
+`data/` contains the labeled training dataset (`data/training/fin_training_dataset.pkl`)
+plus the raw EMG envelopes and manually-scored movement events (`data/raw/`,
+`data/scores/`) it was derived from, for the 9 sessions across 3 animals
+(nb27, nb32, nb34) actually used to train the shipped model. `src/training_pipeline/`
+holds the scripts that turn that raw data into the training dataset
+(`generate_training_dataset.py`) and train the XGBoost model from it
+(`create_classifier.py`). See `data/README.md` for details, including scope
+decisions (why some raw data — e.g. an unused 4th animal, BSA output — is
+excluded).
+
+Note: despite some historical `scoring_type: video` labeling in the pipeline
+code, no video data exists or was used for this classifier — movement
+scoring was done directly against EMG envelope traces.
 
 ## Requirements
 
