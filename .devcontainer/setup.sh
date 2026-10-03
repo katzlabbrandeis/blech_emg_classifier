@@ -6,3 +6,6 @@ echo $GITHUB_TOKEN | gh auth login --with-token
 
 # Verify authentication
 gh auth status
+
+# Install Python dependencies
+pip install -r requirements.txt
